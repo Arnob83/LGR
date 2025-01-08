@@ -99,43 +99,31 @@ def prediction(Credit_History, Education_1, ApplicantIncome, CoapplicantIncome, 
 
 
 def explain_prediction(input_data, final_result):
-    # Use SHAP LinearExplainer for linear models
     explainer = shap.LinearExplainer(classifier, input_data)
 
     # Generate SHAP values
-    shap_values = explainer.shap_values(input_data)  # Returns a single array for binary classification
+    shap_values = explainer.shap_values(input_data)
+    shap_values_for_input = shap_values[0]
 
-    # Extract SHAP values for the input
-    shap_values_for_input = shap_values[0]  # For the first (and only) output
+    # Check SHAP values
+    print("SHAP Values:", shap_values_for_input)
 
-    # Get feature names
-    feature_names = input_data.columns
-
-    # Build explanation text
+    # Explanation text
     explanation_text = f"**Why your loan is {final_result}:**\n\n"
-    for feature, shap_value in zip(feature_names, shap_values_for_input):
-        explanation_text += (
-            f"- **{feature}**: {'Positive' if shap_value > 0 else 'Negative'} contribution with a SHAP value of {shap_value:.2f}\n"
-        )
+    for feature, shap_value in zip(input_data.columns, shap_values_for_input):
+        explanation_text += f"- **{feature}**: Contribution = {shap_value:.4f}\n"
 
-    # Add a summary based on the result
-    if final_result == 'Rejected':
-        explanation_text += "\nThe loan was rejected because the negative contributions outweighed the positive ones."
-    else:
-        explanation_text += "\nThe loan was approved because the positive contributions outweighed the negative ones."
-
+    # Bar plot
     plt.figure(figsize=(8, 5))
-bars = plt.barh(feature_names, shap_values_for_input, color=["green" if val > 0 else "red" for val in shap_values_for_input])
+    bars = plt.barh(input_data.columns, shap_values_for_input, color=["green" if val > 0 else "red" for val in shap_values_for_input])
+    for bar, value in zip(bars, shap_values_for_input):
+        plt.text(bar.get_width(), bar.get_y() + bar.get_height() / 2, f"{value:.4f}", va='center')
+    plt.xlabel("SHAP Value (Impact on Prediction)")
+    plt.ylabel("Features")
+    plt.title("Feature Contributions to Prediction")
+    plt.tight_layout()
+    return explanation_text, plt
 
-# Add values to bars for better readability
-for bar, value in zip(bars, shap_values_for_input):
-    plt.text(bar.get_width(), bar.get_y() + bar.get_height() / 2, f"{value:.4f}", va='center')
-
-plt.xlabel("SHAP Value (Impact on Prediction)")
-plt.ylabel("Features")
-plt.title("Feature Contributions to Prediction")
-plt.tight_layout()
-plt.show()
 
 
 
