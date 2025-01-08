@@ -96,20 +96,24 @@ def prediction(Credit_History, Education_1, ApplicantIncome, CoapplicantIncome, 
     pred_label = 'Approved' if prediction[0] == 1 else 'Rejected'
     return pred_label, input_data_filtered
 
+
+
 def explain_prediction(input_data, final_result):
-    # Use SHAP LinearExplainer for linear models (Logistic Regression)
+    # Use SHAP LinearExplainer for linear models
     explainer = shap.LinearExplainer(classifier, input_data)
 
     # Generate SHAP values
-    shap_values = explainer.shap_values(input_data)
+    shap_values = explainer.shap_values(input_data)  # Returns a single array for binary classification
 
-    # Extract SHAP values for the target class
-    shap_values_for_input = shap_values[1]  # Class 1 corresponds to "Approved" in logistic regression
+    # Extract SHAP values for the input
+    shap_values_for_input = shap_values[0]  # For the first (and only) output
+
+    # Get feature names
     feature_names = input_data.columns
 
     # Build explanation text
     explanation_text = f"**Why your loan is {final_result}:**\n\n"
-    for feature, shap_value in zip(feature_names, shap_values_for_input[0]):  # Use the first row of SHAP values
+    for feature, shap_value in zip(feature_names, shap_values_for_input):
         explanation_text += (
             f"- **{feature}**: {'Positive' if shap_value > 0 else 'Negative'} contribution with a SHAP value of {shap_value:.2f}\n"
         )
@@ -122,7 +126,7 @@ def explain_prediction(input_data, final_result):
 
     # Plot bar chart of SHAP values
     plt.figure(figsize=(8, 5))
-    plt.barh(feature_names, shap_values_for_input[0], color=["green" if val > 0 else "red" for val in shap_values_for_input[0]])
+    plt.barh(feature_names, shap_values_for_input, color=["green" if val > 0 else "red" for val in shap_values_for_input])
     plt.xlabel("SHAP Value (Impact on Prediction)")
     plt.ylabel("Features")
     plt.title("Feature Contributions to Prediction")
