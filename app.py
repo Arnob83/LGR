@@ -136,7 +136,7 @@ plt.ylabel("Features")
 plt.title("Feature Contributions to Prediction")
 plt.tight_layout()
 plt.show()
-return explanation_text, plt
+
 
 
 # Main Streamlit app
