@@ -99,21 +99,23 @@ def prediction(Credit_History, Education_1, ApplicantIncome, CoapplicantIncome, 
 
 
 def explain_prediction(input_data, final_result):
-    explainer = shap.LinearExplainer(classifier, input_data)
+    from sklearn.preprocessing import StandardScaler
+    scaler = StandardScaler()
+    input_data_scaled = pd.DataFrame(scaler.fit_transform(input_data), columns=input_data.columns)
 
-    # Generate SHAP values
-    shap_values = explainer.shap_values(input_data)
-    shap_values_for_input = shap_values[0]
+    # Use SHAP KernelExplainer for more flexibility
+    explainer = shap.KernelExplainer(classifier.predict_proba, X_train)
+    shap_values = explainer.shap_values(input_data_scaled)
 
-    # Check SHAP values
-    print("SHAP Values:", shap_values_for_input)
+    shap_values_for_input = shap_values[1]  # Assuming class 1 is "Approved"
+    print("SHAP Values for Input:", shap_values_for_input)
 
-    # Explanation text
+    # Generate explanation text
     explanation_text = f"**Why your loan is {final_result}:**\n\n"
     for feature, shap_value in zip(input_data.columns, shap_values_for_input):
         explanation_text += f"- **{feature}**: Contribution = {shap_value:.4f}\n"
 
-    # Bar plot
+    # Plot SHAP values
     plt.figure(figsize=(8, 5))
     bars = plt.barh(input_data.columns, shap_values_for_input, color=["green" if val > 0 else "red" for val in shap_values_for_input])
     for bar, value in zip(bars, shap_values_for_input):
