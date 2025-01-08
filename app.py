@@ -1,7 +1,6 @@
 import sqlite3
 import pickle
 import streamlit as st
-import shap
 import matplotlib.pyplot as plt
 import pandas as pd
 import requests
@@ -96,38 +95,19 @@ def prediction(Credit_History, Education_1, ApplicantIncome, CoapplicantIncome, 
     pred_label = 'Approved' if prediction[0] == 1 else 'Rejected'
     return pred_label, input_data_filtered
 
-
-
-def explain_prediction(input_data, final_result):
-    from sklearn.preprocessing import StandardScaler
-    scaler = StandardScaler()
-    input_data_scaled = pd.DataFrame(scaler.fit_transform(input_data), columns=input_data.columns)
-
-    # Use SHAP KernelExplainer for more flexibility
-    explainer = shap.KernelExplainer(classifier.predict_proba, X_train)
-    shap_values = explainer.shap_values(input_data_scaled)
-
-    shap_values_for_input = shap_values[1]  # Assuming class 1 is "Approved"
-    print("SHAP Values for Input:", shap_values_for_input)
-
-    # Generate explanation text
-    explanation_text = f"**Why your loan is {final_result}:**\n\n"
-    for feature, shap_value in zip(input_data.columns, shap_values_for_input):
-        explanation_text += f"- **{feature}**: Contribution = {shap_value:.4f}\n"
-
-    # Plot SHAP values
+# Function to create feature importance plot
+def plot_feature_importance(features, coefficients):
+    # Create a horizontal bar chart for feature importance
     plt.figure(figsize=(8, 5))
-    bars = plt.barh(input_data.columns, shap_values_for_input, color=["green" if val > 0 else "red" for val in shap_values_for_input])
-    for bar, value in zip(bars, shap_values_for_input):
-        plt.text(bar.get_width(), bar.get_y() + bar.get_height() / 2, f"{value:.4f}", va='center')
-    plt.xlabel("SHAP Value (Impact on Prediction)")
+    colors = ["green" if coef > 0 else "red" for coef in coefficients]
+    bars = plt.barh(features, coefficients, color=colors)
+    for bar, coef in zip(bars, coefficients):
+        plt.text(bar.get_width(), bar.get_y() + bar.get_height() / 2, f"{coef:.4f}", va='center')
+    plt.xlabel("Coefficient (Impact on Prediction)")
     plt.ylabel("Features")
-    plt.title("Feature Contributions to Prediction")
+    plt.title("Feature Importance")
     plt.tight_layout()
-    return explanation_text, plt
-
-
-
+    return plt
 
 # Main Streamlit app
 def main():
@@ -198,10 +178,11 @@ def main():
             st.error(f'Your loan is {result}', icon="❌")
 
         # Explain the prediction
-        st.header("Explanation of Prediction")
-        explanation_text, bar_chart = explain_prediction(input_data, final_result=result)
-        st.write(explanation_text)
-        st.pyplot(bar_chart)
+        st.header("Feature Importance")
+        features = classifier.feature_names_in_
+        coefficients = classifier.coef_[0]  # Coefficients of the logistic regression model
+        explanation_chart = plot_feature_importance(features, coefficients)
+        st.pyplot(explanation_chart)
 
     # Download database button
     if st.button("Download Database"):
