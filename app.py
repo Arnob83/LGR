@@ -124,14 +124,19 @@ def explain_prediction(input_data, final_result):
     else:
         explanation_text += "\nThe loan was approved because the positive contributions outweighed the negative ones."
 
-    # Plot bar chart of SHAP values
     plt.figure(figsize=(8, 5))
-    plt.barh(feature_names, shap_values_for_input, color=["green" if val > 0 else "red" for val in shap_values_for_input])
-    plt.xlabel("SHAP Value (Impact on Prediction)")
-    plt.ylabel("Features")
-    plt.title("Feature Contributions to Prediction")
-    plt.tight_layout()
-    return explanation_text, plt
+bars = plt.barh(feature_names, shap_values_for_input, color=["green" if val > 0 else "red" for val in shap_values_for_input])
+
+# Add values to bars for better readability
+for bar, value in zip(bars, shap_values_for_input):
+    plt.text(bar.get_width(), bar.get_y() + bar.get_height() / 2, f"{value:.4f}", va='center')
+
+plt.xlabel("SHAP Value (Impact on Prediction)")
+plt.ylabel("Features")
+plt.title("Feature Contributions to Prediction")
+plt.tight_layout()
+plt.show()
+return explanation_text, plt
 
 
 # Main Streamlit app
