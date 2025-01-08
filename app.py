@@ -92,8 +92,10 @@ def prediction(Credit_History, Education_1, ApplicantIncome, CoapplicantIncome, 
 
     # Model prediction (0 = Rejected, 1 = Approved)
     prediction = classifier.predict(input_data_filtered)
+    probabilities = classifier.predict_proba(input_data_filtered)  # Get prediction probabilities
+    
     pred_label = 'Approved' if prediction[0] == 1 else 'Rejected'
-    return pred_label, input_data_filtered
+    return pred_label, input_data, input_data_scaled, probabilities, input_data_filtered
 
 # Function to create feature importance plot
 def plot_feature_importance(features, coefficients):
@@ -158,7 +160,7 @@ def main():
 
     # Prediction and database saving
     if st.button("Predict"):
-        result, input_data = prediction(
+        result, input_data, input_data_scaled, probabilities, input_data_filtered = prediction(
             Credit_History,
             Education_1,
             ApplicantIncome,
@@ -173,16 +175,45 @@ def main():
 
         # Display the prediction
         if result == "Approved":
-            st.success(f'Your loan is {result}', icon="✅")
+            st.success(f"Your loan is Approved! (Probability: {probabilities[0][1]:.2f})", icon="✅")
         else:
-            st.error(f'Your loan is {result}', icon="❌")
+            st.error(f"Your loan is Rejected! (Probability: {probabilities[0][0]:.2f})", icon="❌")
 
-        # Explain the prediction
-        st.header("Feature Importance")
-        features = classifier.feature_names_in_
-        coefficients = classifier.coef_[0]  # Coefficients of the logistic regression model
-        explanation_chart = plot_feature_importance(features, coefficients)
-        st.pyplot(explanation_chart)
+        # Show prediction values and scaled values
+        st.subheader("Prediction Value")
+        st.write(input_data)
+
+        st.subheader("Input Data (Scaled)")
+        st.write(pd.DataFrame(input_data_scaled, columns=input_data.columns))
+
+        # Calculate feature contributions
+        coefficients = classifier.coef_[0]
+        feature_contributions = coefficients * input_data_scaled.iloc[0]
+
+        # Create a DataFrame for visualization
+        feature_df = pd.DataFrame({
+            'Feature': input_data.columns,
+            'Contribution': feature_contributions
+        }).sort_values(by="Contribution", ascending=False)
+
+        # Plot feature contributions
+        st.subheader("Feature Contributions")
+        fig, ax = plt.subplots(figsize=(8, 5))
+        colors = ['green' if val >= 0 else 'red' for val in feature_df['Contribution']]
+        ax.barh(feature_df['Feature'], feature_df['Contribution'], color=colors)
+        ax.set_xlabel("Contribution to Prediction")
+        ax.set_ylabel("Features")
+        ax.set_title("Feature Contributions to Prediction")
+        st.pyplot(fig)
+
+        # Add explanations for the features
+        st.subheader("Feature Contribution Explanations")
+        for index, row in feature_df.iterrows():
+            if row['Contribution'] >= 0:
+                explanation = f"The feature '{row['Feature']}' positively influenced the loan approval."
+            else:
+                explanation = f"The feature '{row['Feature']}' negatively influenced the loan approval."
+            st.write(f"- {explanation}")
 
     # Download database button
     if st.button("Download Database"):
