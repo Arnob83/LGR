@@ -1,1 +1,1 @@
-# LGR
+# LGR for all feature scalig
